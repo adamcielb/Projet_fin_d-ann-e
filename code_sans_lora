@@ -1,0 +1,50 @@
+#include <Wire.h>
+#include <Adafruit_BMP280.h>
+
+// Adresse I2C pour le BMP280
+#define BMP280_I2C_ADDR 0x76  // Adresse par défaut du BMP280
+
+// Création de l'objet BMP280
+Adafruit_BMP280 bmp;
+
+void setup() {
+  // Initialisation de la communication série pour l'affichage des données
+  Serial.begin(9600);
+  while (!Serial) {
+    delay(10);  // Attendre que le port série soit prêt
+  }
+
+  // Initialisation du capteur BMP280
+  if (!bmp.begin(BMP280_I2C_ADDR)) {
+    Serial.println(F("Impossible de trouver un capteur BMP280 !"));
+    while (1) delay(10);  // Boucle infinie si le capteur n'est pas trouvé
+  }
+
+  // Paramétrage du capteur BMP280 pour ne mesurer que la pression
+  bmp.setSampling(Adafruit_BMP280::MODE_FORCED,     // Mode de fonctionnement
+                  Adafruit_BMP280::SAMPLING_NONE,   // Pas de température (désactivée)
+                  Adafruit_BMP280::SAMPLING_X16,    // Echantillonnage de pression à X16
+                  Adafruit_BMP280::FILTER_X16,      // Filtrage des données
+                  Adafruit_BMP280::STANDBY_MS_500); // Temps de veille de 500 ms
+
+  Serial.println(F("Démarrage du système de mesure de pression..."));
+}
+
+void loop() {
+  // Mesure forcée de la pression (passe en mode veille après la mesure)
+  if (bmp.takeForcedMeasurement()) {
+    // Lecture de la pression en Pascals
+    float pressure = bmp.readPressure();
+
+    // Affichage de la pression dans la console série
+    Serial.print(F("Pression : "));
+    Serial.print(pressure);
+    Serial.println(F(" Pa"));
+
+    // Attendre 2 secondes avant de refaire une autre mesure
+    delay(2000);
+  } else {
+    // En cas d'échec de la mesure
+    Serial.println("Échec de la mesure forcée !");
+  }
+}

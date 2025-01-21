@@ -1,64 +1,38 @@
-#include <iostream>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/i2c-dev.h>
+// Inclure les bibliothèques nécessaires
+#include <Adafruit_BMP280.h> // Bibliothèque pour le capteur BMP280
 
-#define BMP280_ADDRESS 0x76
-#define REG_CONTROL 0xF4
-#define REG_PRESS_MSB 0xF7
+// Définir l'adresse I2C du capteur BMP280
+#define BMP280_I2C_ADDRESS 0x76
+
+// Créer une instance du capteur BMP280
+Adafruit_BMP280 bmp; // (Objet de la bibliothèque Adafruit pour communiquer avec le capteur BMP280)
 
 int main() {
-    const char *device = "/dev/i2c-1";
-    int file = open(device, O_RDWR);
-    if (file < 0) {
-        std::cerr << "Failed to open the I2C bus\n";
-        return 1;
+    // Initialiser le capteur BMP280
+    if (!bmp.begin(BMP280_I2C_ADDRESS)) { // (bmp.begin : Initialise le capteur avec l'adresse I2C)
+        std::cerr << "Impossible de trouver le capteur BMP280. Vérifiez les connexions !" << std::endl;
+        return 1; // Retourner une erreur si le capteur n'est pas détecté
     }
 
-    if (ioctl(file, I2C_SLAVE, BMP280_ADDRESS) < 0) {
-        std::cerr << "Failed to acquire bus access or talk to slave\n";
-        return 1;
-    }
+    // Configurer le capteur pour la lecture de la pression uniquement
+    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,      // (Mode normal)
+                    Adafruit_BMP280::SAMPLING_NONE,    // Pas de lecture de température
+                    Adafruit_BMP280::SAMPLING_X16,     // Suréchantillonnage x16 pour la pression
+                    Adafruit_BMP280::FILTER_OFF,       // Pas de filtre
+                    Adafruit_BMP280::STANDBY_MS_1);    // Temps d'attente 1 ms
 
-    // Configure the BMP280: set oversampling and mode
-    char config[2] = {REG_CONTROL, 0x27};  // Normal mode, oversampling x1
-    if (write(file, config, 2) != 2) {
-        std::cerr << "Failed to configure the BMP280\n";
-        return 1;
-    }
-
+    // Lire et afficher 10 relevés de pression
     for (int i = 0; i < 10; i++) {
-        // Wait for measurement to complete
-        usleep(1000);
+        // Lire la pression atmosphérique en hPa
+        float pressure = bmp.readPressure() / 100.0F; // (bmp.readPressure : Renvoie la pression en Pascals, divisée par 100 pour obtenir hPa)
 
-        // Read pressure data
-        char reg = REG_PRESS_MSB;
-        if (write(file, &reg, 1) != 1) {
-            std::cerr << "Failed to set register pointer\n";
-            return 1;
-        }
-
-        char data[6];
-        if (read(file, data, 6) != 6) {
-            std::cerr << "Failed to read data from BMP280\n";
-            return 1;
-        }
-
-        // Combine data to calculate raw pressure
-        int rawPressure = ((int)data[0] << 12) | ((int)data[1] << 4) | ((data[2] >> 4) & 0x0F);
-
-        // Convert to hPa (you may need to refine based on calibration)
-        double pressure = rawPressure / 25600.0;
-
-        // Display the result
+        // Afficher le relevé de pression
         std::cout << "Relevé " << (i + 1) << ": Pression = " << pressure << " hPa" << std::endl;
 
-        // Pause 2 seconds before the next measurement
+        // Attendre 2 secondes avant le prochain relevé
         sleep(2);
     }
 
-    close(file);
     return 0;
 }
 

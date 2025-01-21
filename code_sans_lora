@@ -1,50 +1,64 @@
-#include <Wire.h>
-#include <Adafruit_BMP280.h>
+#include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/i2c-dev.h>
 
-// Adresse I2C pour le BMP280
-#define BMP280_I2C_ADDR 0x76  // Adresse par défaut du BMP280
+#define BMP280_ADDRESS 0x76
+#define REG_CONTROL 0xF4
+#define REG_PRESS_MSB 0xF7
 
-// Création de l'objet BMP280
-Adafruit_BMP280 bmp;
+int main() {
+    const char *device = "/dev/i2c-1";
+    int file = open(device, O_RDWR);
+    if (file < 0) {
+        std::cerr << "Failed to open the I2C bus\n";
+        return 1;
+    }
 
-void setup() {
-  // Initialisation de la communication série pour l'affichage des données
-  Serial.begin(9600);
-  while (!Serial) {
-    delay(10);  // Attendre que le port série soit prêt
-  }
+    if (ioctl(file, I2C_SLAVE, BMP280_ADDRESS) < 0) {
+        std::cerr << "Failed to acquire bus access or talk to slave\n";
+        return 1;
+    }
 
-  // Initialisation du capteur BMP280
-  if (!bmp.begin(BMP280_I2C_ADDR)) {
-    Serial.println(F("Impossible de trouver un capteur BMP280 !"));
-    while (1) delay(10);  // Boucle infinie si le capteur n'est pas trouvé
-  }
+    // Configure the BMP280: set oversampling and mode
+    char config[2] = {REG_CONTROL, 0x27};  // Normal mode, oversampling x1
+    if (write(file, config, 2) != 2) {
+        std::cerr << "Failed to configure the BMP280\n";
+        return 1;
+    }
 
-  // Paramétrage du capteur BMP280 pour ne mesurer que la pression
-  bmp.setSampling(Adafruit_BMP280::MODE_FORCED,     // Mode de fonctionnement
-                  Adafruit_BMP280::SAMPLING_NONE,   // Pas de température (désactivée)
-                  Adafruit_BMP280::SAMPLING_X16,    // Echantillonnage de pression à X16
-                  Adafruit_BMP280::FILTER_X16,      // Filtrage des données
-                  Adafruit_BMP280::STANDBY_MS_500); // Temps de veille de 500 ms
+    for (int i = 0; i < 10; i++) {
+        // Wait for measurement to complete
+        usleep(1000);
 
-  Serial.println(F("Démarrage du système de mesure de pression..."));
+        // Read pressure data
+        char reg = REG_PRESS_MSB;
+        if (write(file, &reg, 1) != 1) {
+            std::cerr << "Failed to set register pointer\n";
+            return 1;
+        }
+
+        char data[6];
+        if (read(file, data, 6) != 6) {
+            std::cerr << "Failed to read data from BMP280\n";
+            return 1;
+        }
+
+        // Combine data to calculate raw pressure
+        int rawPressure = ((int)data[0] << 12) | ((int)data[1] << 4) | ((data[2] >> 4) & 0x0F);
+
+        // Convert to hPa (you may need to refine based on calibration)
+        double pressure = rawPressure / 25600.0;
+
+        // Display the result
+        std::cout << "Relevé " << (i + 1) << ": Pression = " << pressure << " hPa" << std::endl;
+
+        // Pause 2 seconds before the next measurement
+        sleep(2);
+    }
+
+    close(file);
+    return 0;
 }
 
-void loop() {
-  // Mesure forcée de la pression (passe en mode veille après la mesure)
-  if (bmp.takeForcedMeasurement()) {
-    // Lecture de la pression en Pascals
-    float pressure = bmp.readPressure();
-
-    // Affichage de la pression dans la console série
-    Serial.print(F("Pression : "));
-    Serial.print(pressure);
-    Serial.println(F(" Pa"));
-
-    // Attendre 2 secondes avant de refaire une autre mesure
-    delay(2000);
-  } else {
-    // En cas d'échec de la mesure
-    Serial.println("Échec de la mesure forcée !");
-  }
-}

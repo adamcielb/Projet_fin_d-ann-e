@@ -2,7 +2,6 @@
 #include <iostream>
 
 #define REED_PIN 0  // GPIO17 sur Raspberry Pi
-#define CONVERSION_FACTOR 0.7452  // 1 tour ≈ 0.7452 km/h (calculé à partir de la datasheet)
 
 volatile int pulseCount = 0;  // Compteur d'impulsions
 
@@ -25,19 +24,14 @@ int main() {
     // Configuration de l'interruption sur front montant
     wiringPiISR(REED_PIN, INT_EDGE_RISING, &pulseDetected);
 
-    std::cout << "Mesure de la vitesse du vent... (Ctrl+C pour quitter)" << std::endl;
+    std::cout << "Test des impulsions... (Ctrl+C pour quitter)" << std::endl;
 
     // Boucle principale
     while (true) {
-        int currentPulseCount = pulseCount;  // Sauvegarde du nombre d'impulsions actuel
-        delay(1000);  // Attend 1 seconde (1000 ms)
-
-        // Calcul de la vitesse du vent
-        double windSpeed = currentPulseCount * CONVERSION_FACTOR;
-        std::cout << "Vitesse du vent : " << windSpeed << " km/h" << std::endl;
-
-        // Ne pas réinitialiser pulseCount ici, il sera mis à jour par l'interruption
+        std::cout << "Impulsions détectées : " << pulseCount << std::endl;
+        delay(1000);  // Affiche le nombre d'impulsions chaque seconde
     }
 
     return 0;
 }
+

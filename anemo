@@ -25,24 +25,19 @@ int main() {
     // Configuration de l'interruption sur front montant
     wiringPiISR(REED_PIN, INT_EDGE_RISING, &pulseDetected);
 
-    // Demander à l'utilisateur le nombre de relevés souhaités
-    int nombreReleves;
-    std::cout << "Entrez le nombre de relevés souhaités : ";
-    std::cin >> nombreReleves;
-
-    std::cout << "Mesure de la vitesse du vent... (" << nombreReleves << " relevés)" << std::endl;
+    std::cout << "Mesure de la vitesse du vent... (Ctrl+C pour quitter)" << std::endl;
 
     // Boucle principale
-    for (int i = 0; i < nombreReleves; i++) {
-        pulseCount = 0;  // Réinitialise le compteur d'impulsions
+    while (true) {
+        int currentPulseCount = pulseCount;  // Sauvegarde du nombre d'impulsions actuel
         delay(1000);  // Attend 1 seconde (1000 ms)
 
         // Calcul de la vitesse du vent
-        double windSpeed = pulseCount * CONVERSION_FACTOR;
-        std::cout << "Relevé " << (i + 1) << " : Vitesse du vent = " << windSpeed << " km/h" << std::endl;
-    }
+        double windSpeed = currentPulseCount * CONVERSION_FACTOR;
+        std::cout << "Vitesse du vent : " << windSpeed << " km/h" << std::endl;
 
-    std::cout << "Mesures terminées. Programme arrêté." << std::endl;
+        // Ne pas réinitialiser pulseCount ici, il sera mis à jour par l'interruption
+    }
 
     return 0;
 }

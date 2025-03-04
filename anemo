@@ -1,50 +1,53 @@
 #include <iostream>
-#include <pigpio.h>
+#include <wiringPi.h>
 #include <ctime>
 
-#define WIND_SENSOR_PIN 17  // GPIO 17 (Pin 11)
-#define WIND_FACTOR 2.5  // Facteur de conversion en mph/impulsion (ajustable selon datasheet)
+#define WIND_SENSOR_PIN 0  // GPIO 17 correspond à Pin 0 dans wiringPi
+#define WIND_FACTOR 2.5  // Facteur de conversion en mph/impulsion
+#define MEASUREMENT_TIME 5  // Durée de chaque mesure en secondes
+
+using namespace std;
 
 volatile int pulseCount = 0;  // Compteur d'impulsions
 
 // Fonction appelée à chaque impulsion détectée
-void windPulse(int gpio, int level, uint32_t tick) {
-    if (level == 0) pulseCount++;  // Détection front descendant (fermeture Reed switch)
+void windPulse() {
+    pulseCount++;  // Incrémente à chaque front descendant (fermeture Reed switch)
 }
 
 int main() {
-    // Initialisation de pigpio
-    if (gpioInitialise() < 0) {
-        std::cerr << "Erreur d'initialisation de pigpio !" << std::endl;
+    // Initialisation de wiringPi
+    if (wiringPiSetup() == -1) {
+        cerr << "Erreur d'initialisation de wiringPi !" << endl;
         return 1;
     }
 
-    // Configuration du GPIO
-    gpioSetMode(WIND_SENSOR_PIN, PI_INPUT);
-    gpioSetPullUpDown(WIND_SENSOR_PIN, PI_PUD_UP); // Active la résistance pull-up
-    gpioSetAlertFunc(WIND_SENSOR_PIN, windPulse); // Détecte les impulsions
+    // Configuration du GPIO en entrée avec interruption
+    pinMode(WIND_SENSOR_PIN, INPUT);
+    pullUpDnControl(WIND_SENSOR_PIN, PUD_UP);  // Active la résistance pull-up
+    wiringPiISR(WIND_SENSOR_PIN, INT_EDGE_FALLING, &windPulse); // Détection des impulsions
 
     int nombreReleves;
-    std::cout << "Combien de relevés souhaitez-vous ? ";
-    std::cin >> nombreReleves;
+    cout << "Combien de relevés souhaitez-vous ? ";
+    cin >> nombreReleves;
 
     for (int i = 0; i < nombreReleves; i++) {
         pulseCount = 0;
-        time_t startTime = time(NULL);
+        time_t startTime = time(nullptr);
 
-        while (time(NULL) - startTime < 5) {  // Mesure sur 5 secondes
-            time_sleep(0.1);
+        while (time(nullptr) - startTime < MEASUREMENT_TIME) {
+            delay(100);
         }
 
         // Calcul de la vitesse du vent
-        double windSpeedMph = (pulseCount * WIND_FACTOR) / 5.0;  // Conversion en mph
-        double windSpeedKmh = windSpeedMph * 1.609;  // Conversion en km/h
+        double windSpeedMph = (pulseCount * WIND_FACTOR) / MEASUREMENT_TIME;
+        double windSpeedKmh = windSpeedMph * 1.609;
 
-        std::cout << "Relevé " << (i + 1) << " - Vitesse du vent : " 
-                  << windSpeedMph << " mph (" << windSpeedKmh << " km/h)" << std::endl;
+        cout << "Relevé " << (i + 1) << " - Vitesse du vent : " 
+             << windSpeedMph << " mph (" << windSpeedKmh << " km/h)" << endl;
     }
 
-    gpioTerminate();  // Arrête pigpio
     return 0;
 }
+
 

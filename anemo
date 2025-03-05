@@ -6,6 +6,7 @@ const double FACTOR_MPH = 2.5;      // Facteur d'étalonnage en mph
 const double FACTOR_KMH = 4.0225;   // Facteur d'étalonnage en km/h
 
 volatile int pulse_count = 0;
+int numberOfReadings = 0;  // Nouvelle variable pour compter le nombre de relevés
 
 void pulse_detected() {
     pulse_count++;  
@@ -19,14 +20,16 @@ int main() {
 
     while (true) {
         delay(1000);  // Attendre 1 seconde
+
+        // Calculer la vitesse du vent
         double wind_speed_mph = pulse_count * FACTOR_MPH;
         double wind_speed_kmh = pulse_count * FACTOR_KMH;
 
+        // Afficher la vitesse du vent et le nombre de relevés
         std::cout << "Vent : " << wind_speed_mph << " mph | " 
                   << wind_speed_kmh << " km/h" << std::endl;
-        
-        pulse_count = 0;  // Réinitialiser le compteur
+        std::cout << "Nombre de relevés : " << ++numberOfReadings << std::endl;
+
+        pulse_count = 0;  // Réinitialiser le compteur d'impulsions
     }
 }
-
-

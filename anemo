@@ -2,34 +2,38 @@
 #include <wiringPi.h>
 
 #define REED_PIN 0  
-const double FACTOR_MPH = 2.5;      // Facteur d'étalonnage en mph
-const double FACTOR_KMH = 4.0225;   // Facteur d'étalonnage en km/h
+const double FACTEUR_MPH = 2.5;      // Facteur d'étalonnage en mph
+const double FACTEUR_KMH = 4.0225;   // Facteur d'étalonnage en km/h
 
-volatile int pulse_count = 0;
-int numberOfReadings = 0;  // Nouvelle variable pour compter le nombre de relevés
+volatile int compteur_impulsions = 0;
+int nbre_releves = 15;       // Nombre de relevés fixé à 15
 
-void pulse_detected() {
-    pulse_count++;  
+void impulsion_detectée() {
+    compteur_impulsions++;  
 }
 
 int main() {
     wiringPiSetup();
     pinMode(REED_PIN, INPUT);
     pullUpDnControl(REED_PIN, PUD_UP);
-    wiringPiISR(REED_PIN, INT_EDGE_FALLING, &pulse_detected);
+    wiringPiISR(REED_PIN, INT_EDGE_FALLING, &impulsion_detectée);
 
-    while (true) {
+    for (int i = 0; i < nbre_releves; ++i) {
         delay(1000);  // Attendre 1 seconde
 
         // Calculer la vitesse du vent
-        double wind_speed_mph = pulse_count * FACTOR_MPH;
-        double wind_speed_kmh = pulse_count * FACTOR_KMH;
+        double vitesse_vent_mph = compteur_impulsions * FACTEUR_MPH;
+        double vitesse_vent_kmh = compteur_impulsions * FACTEUR_KMH;
 
-        // Afficher la vitesse du vent et le nombre de relevés
-        std::cout << "Vent : " << wind_speed_mph << " mph | " 
-                  << wind_speed_kmh << " km/h" << std::endl;
-        std::cout << "Nombre de relevés : " << ++numberOfReadings << std::endl;
+        // Afficher la vitesse du vent et le numéro de relevé
+        std::cout << "Vent : " << vitesse_vent_mph << " mph | " 
+                  << vitesse_vent_kmh << " km/h" << std::endl;
+        std::cout << "Relevé numéro : " << (i + 1) << std::endl;
 
-        pulse_count = 0;  // Réinitialiser le compteur d'impulsions
+        compteur_impulsions = 0;  // Réinitialiser le compteur d'impulsions
     }
+
+    std::cout << "Nombre de relevés terminé." << std::endl;
+
+    return 0;
 }

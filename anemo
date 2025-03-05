@@ -1,53 +1,42 @@
-#include <iostream>
 #include <wiringPi.h>
-#include <ctime>
+#include <iostream>
 
-#define WIND_SENSOR_PIN 0  // GPIO 17 correspond à Pin 0 dans wiringPi
-#define WIND_FACTOR 2.5  // Facteur de conversion en mph/impulsion
-#define MEASUREMENT_TIME 5  // Durée de chaque mesure en secondes
-
-using namespace std;
+#define REED_PIN 0  // GPIO17 sur Raspberry Pi
+#define CONVERSION_FACTOR 0.7452  // 1 tour ≈ 0.7452 km/h (calculé à partir de la datasheet)
 
 volatile int pulseCount = 0;  // Compteur d'impulsions
 
-// Fonction appelée à chaque impulsion détectée
-void windPulse() {
-    pulseCount++;  // Incrémente à chaque front descendant (fermeture Reed switch)
+// Fonction appelée à chaque front montant (détection 5V)
+void pulseDetected() {
+    pulseCount++;  // Incrémente le compteur d'impulsions
 }
 
 int main() {
-    // Initialisation de wiringPi
+    // Initialisation de WiringPi
     if (wiringPiSetup() == -1) {
-        cerr << "Erreur d'initialisation de wiringPi !" << endl;
+        std::cerr << "Erreur d'initialisation de WiringPi" << std::endl;
         return 1;
     }
 
-    // Configuration du GPIO en entrée avec interruption
-    pinMode(WIND_SENSOR_PIN, INPUT);
-    pullUpDnControl(WIND_SENSOR_PIN, PUD_UP);  // Active la résistance pull-up
-    wiringPiISR(WIND_SENSOR_PIN, INT_EDGE_FALLING, &windPulse); // Détection des impulsions
+    // Configuration du pin GPIO en entrée avec résistance de pull-up
+    pinMode(REED_PIN, INPUT);
+    pullUpDnControl(REED_PIN, PUD_UP);
 
-    int nombreReleves;
-    cout << "Combien de relevés souhaitez-vous ? ";
-    cin >> nombreReleves;
+    // Configuration de l'interruption sur front montant
+    wiringPiISR(REED_PIN, INT_EDGE_RISING, &pulseDetected);
 
-    for (int i = 0; i < nombreReleves; i++) {
-        pulseCount = 0;
-        time_t startTime = time(nullptr);
+    std::cout << "Mesure de la vitesse du vent... (Ctrl+C pour quitter)" << std::endl;
 
-        while (time(nullptr) - startTime < MEASUREMENT_TIME) {
-            delay(100);
-        }
+    // Boucle principale
+    while (true) {
+        pulseCount = 0;  // Réinitialise le compteur d'impulsions
+        delay(1000);  // Attend 1 seconde (1000 ms)
 
         // Calcul de la vitesse du vent
-        double windSpeedMph = (pulseCount * WIND_FACTOR) / MEASUREMENT_TIME;
-        double windSpeedKmh = windSpeedMph * 1.609;
-
-        cout << "Relevé " << (i + 1) << " - Vitesse du vent : " 
-             << windSpeedMph << " mph (" << windSpeedKmh << " km/h)" << endl;
+        double windSpeed = pulseCount * CONVERSION_FACTOR;
+        std::cout << "Vitesse du vent : " << windSpeed << " km/h" << std::endl;
     }
 
     return 0;
 }
-
 

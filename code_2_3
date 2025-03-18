@@ -1,35 +1,38 @@
-#include <iostream>
+#include <iostream>  // Inclusion de la bibliothèque pour l'affichage et la saisie
 
-using namespace std;
+using namespace std; // Permet d'éviter d'écrire "std::" devant cout et cin
 
 int main() {
+    // Déclaration des variables pour stocker les valeurs des capteurs
     float temperature, humidite, pression, vent;
 
-    // 🔴 Demande à l'utilisateur d'entrer les valeurs (simulation)
+    // 🔴 Simulation : Demande à l'utilisateur d'entrer les valeurs des capteurs
     cout << "Température (°C) : ";
-    cin >> temperature;
+    cin >> temperature; // Lecture de la température saisie par l'utilisateur
 
     cout << "Humidité (%) : ";
-    cin >> humidite;
+    cin >> humidite; // Lecture du taux d'humidité
 
     cout << "Pression (hPa) : ";
-    cin >> pression;
+    cin >> pression; // Lecture de la pression atmosphérique
 
     cout << "Vitesse du vent (km/h) : ";
-    cin >> vent;
+    cin >> vent; // Lecture de la vitesse du vent
 
-    // 🔴 Seuils d'alerte (tu peux les ajuster)
-    bool risque_moderé = (temperature >= 20 && temperature <= 25) &&
-                         (humidite >= 60 && humidite <= 70) &&
-                         (pression >= 995 && pression <= 1000) &&
-                         (vent >= 20 && vent <= 30);
+    // 🔴 Définition des seuils de risque de grêle
+    // Conditions pour un RISQUE MODÉRÉ (niveau 2)
+    bool risque_moderé = (temperature >= 20 && temperature <= 25) &&  // Température entre 20 et 25°C
+                         (humidite >= 60 && humidite <= 70) &&        // Humidité entre 60% et 70%
+                         (pression >= 995 && pression <= 1000) &&    // Pression entre 995 hPa et 1000 hPa
+                         (vent >= 20 && vent <= 30);                 // Vent entre 20 km/h et 30 km/h
 
-    bool risque_eleve = (temperature > 25) &&
-                        (humidite > 70) &&
-                        (pression < 995) &&
-                        (vent > 30);
+    // Conditions pour un RISQUE ÉLEVÉ (niveau 3)
+    bool risque_eleve = (temperature > 25) &&  // Température supérieure à 25°C
+                        (humidite > 70) &&     // Humidité supérieure à 70%
+                        (pression < 995) &&    // Pression inférieure à 995 hPa
+                        (vent > 30);           // Vent supérieur à 30 km/h
 
-    // 🔴 Vérification du risque
+    // 🔴 Vérification des risques et affichage du message correspondant
     if (risque_eleve) {
         cout << "⚠️ ALERTE GRELE NIVEAU 3 : RISQUE ÉLEVÉ !" << endl;
     } 
@@ -40,5 +43,5 @@ int main() {
         cout << "✅ Pas de risque de grêle détecté." << endl;
     }
 
-    return 0;
+    return 0; // Fin du programme
 }

@@ -1,0 +1,44 @@
+#include <iostream>
+
+using namespace std;
+
+int main() {
+    float temperature, humidite, pression, vent;
+
+    // 🔴 Demande à l'utilisateur d'entrer les valeurs (simulation)
+    cout << "Température (°C) : ";
+    cin >> temperature;
+
+    cout << "Humidité (%) : ";
+    cin >> humidite;
+
+    cout << "Pression (hPa) : ";
+    cin >> pression;
+
+    cout << "Vitesse du vent (km/h) : ";
+    cin >> vent;
+
+    // 🔴 Seuils d'alerte (tu peux les ajuster)
+    bool risque_moderé = (temperature >= 20 && temperature <= 25) &&
+                         (humidite >= 60 && humidite <= 70) &&
+                         (pression >= 995 && pression <= 1000) &&
+                         (vent >= 20 && vent <= 30);
+
+    bool risque_eleve = (temperature > 25) &&
+                        (humidite > 70) &&
+                        (pression < 995) &&
+                        (vent > 30);
+
+    // 🔴 Vérification du risque
+    if (risque_eleve) {
+        cout << "⚠️ ALERTE GRELE NIVEAU 3 : RISQUE ÉLEVÉ !" << endl;
+    } 
+    else if (risque_moderé) {
+        cout << "⚠️ ALERTE GRELE NIVEAU 2 : RISQUE MODÉRÉ !" << endl;
+    } 
+    else {
+        cout << "✅ Pas de risque de grêle détecté." << endl;
+    }
+
+    return 0;
+}

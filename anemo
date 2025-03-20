@@ -1,39 +1,51 @@
 #include <iostream>
 #include <wiringPi.h>
 
+// Définition de la broche GPIO utilisée pour l'anémomètre (avec un capteur à impulsions)
 #define REED_PIN 0  
-const double FACTEUR_MPH = 2.5;      // Facteur d'étalonnage en mph
-const double FACTEUR_KMH = 4.0225;   // Facteur d'étalonnage en km/h
 
-volatile int compteur_impulsions = 0;
-int nbre_releves = 15;       // Nombre de relevés fixé à 15
+// Facteurs d'étalonnage pour convertir les impulsions en vitesse du vent
+const double FACTEUR_MPH = 2.5;      // Facteur d'étalonnage pour mph
+const double FACTEUR_KMH = 4.0225;   // Facteur d'étalonnage pour km/h
 
+volatile int compteur_impulsions = 0; // Compteur d'impulsions mesurées (chaque impulsion représente un certain déplacement du vent)
+int nbre_releves = 15;               // Nombre de relevés à effectuer (fixé à 15 dans ce cas)
+
+
+// Fonction appelée à chaque détection d'une impulsion sur la broche du capteur (anémomètre)
 void impulsion_detectée() {
-    compteur_impulsions++;  
+    compteur_impulsions++;  // Incrémente le compteur d'impulsions à chaque détection
 }
 
 int main() {
-    wiringPiSetup();
-    pinMode(REED_PIN, INPUT);
-    pullUpDnControl(REED_PIN, PUD_UP);
+    wiringPiSetup();  // Initialisation de la bibliothèque WiringPi pour l'accès aux broches GPIO
+    pinMode(REED_PIN, INPUT);  // Configure la broche REED_PIN comme entrée (pour lire les impulsions)
+    pullUpDnControl(REED_PIN, PUD_UP);  // Active une résistance de tirage vers le haut (assure un signal stable sur l'entrée)
+    
+    // Enregistre la fonction impulsion_detectée comme gestionnaire d'interruption
+    // Cela signifie qu'à chaque front descendant (impulsion) de la broche REED_PIN, la fonction sera appelée
     wiringPiISR(REED_PIN, INT_EDGE_FALLING, &impulsion_detectée);
 
+    // Effectuer un certain nombre de relevés
     for (int i = 0; i < nbre_releves; ++i) {
-        delay(1000);  // Attendre 1 seconde
+        delay(1000);  // Attendre 1 seconde avant de prendre une nouvelle mesure
 
-        // Calculer la vitesse du vent
+        // Calculer la vitesse du vent en mph et km/h
+        // Chaque impulsion correspond à un déplacement mesuré, et ce facteur permet de convertir ce nombre d'impulsions en vitesse
         double vitesse_vent_mph = compteur_impulsions * FACTEUR_MPH;
         double vitesse_vent_kmh = compteur_impulsions * FACTEUR_KMH;
 
-        // Afficher la vitesse du vent et le numéro de relevé
+        // Afficher la vitesse du vent en mph et km/h et afficher le numéro de relevé
+        // Cela permet de voir l'évolution de la vitesse du vent sur les différents relevés
         std::cout << "Vent : " << vitesse_vent_mph << " mph | " 
                   << vitesse_vent_kmh << " km/h" << std::endl;
         std::cout << "Relevé numéro : " << (i + 1) << std::endl;
 
-        compteur_impulsions = 0;  // Réinitialiser le compteur d'impulsions
+        compteur_impulsions = 0;  // Réinitialiser le compteur d'impulsions pour le prochain relevé
     }
 
+    // Indique que le nombre de relevés spécifié est terminé
     std::cout << "Nombre de relevés terminé." << std::endl;
 
-    return 0;
+    return 0;  // Fin du programme
 }

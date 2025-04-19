@@ -1,0 +1,70 @@
+#include <wiringPi.h>
+#include <iostream>
+#include <chrono>
+#include <cmath>
+
+using namespace std;
+using namespace std::chrono;
+
+// Définition de la broche utilisée pour l'anémomètre
+#define PIN_ANEMO 17  // GPIO 17 (Broche physique 11)
+
+// Constantes physiques de l’anémomètre Peet Bros
+const double DIAMETRE_PO = 2.6;  // Diamètre des coupelles en pouces
+const double DIAMETRE_CM = DIAMETRE_PO * 2.54; // Conversion en cm
+const double RAYON_CM = DIAMETRE_CM / 2.0;
+const double CIRCONFERENCE_CM = 2 * M_PI * RAYON_CM; // Circonférence en cm
+
+// Variables globales
+volatile bool firstPulseCaptured = false;
+steady_clock::time_point t0, tx;
+
+// Fonction appelée lors d'une impulsion de l'anémomètre
+void pulseISR() {
+    if (!firstPulseCaptured) {
+        t0 = steady_clock::now();
+        firstPulseCaptured = true;
+    } else {
+        tx = steady_clock::now();
+        double deltaT = duration_cast<duration<double>>(tx - t0).count(); // Temps en secondes
+        
+        if (deltaT > 0) {
+            double vitesseLin_cm_s = CIRCONFERENCE_CM / deltaT; // Vitesse en cm/s
+            double vitesse_m_s = vitesseLin_cm_s / 100.0; // Conversion en m/s
+            double vitesse_km_h = vitesse_m_s * 3.6; // Conversion en km/h
+
+            cout << "Δt = " << deltaT << " s | Vitesse du vent : " 
+                 << vitesse_m_s << " m/s (" << vitesse_km_h << " km/h)" << endl;
+        }
+
+        // Réinitialisation pour la prochaine mesure
+        firstPulseCaptured = false;
+    }
+}
+
+int main() {
+    // Initialisation de wiringPi
+    if (wiringPiSetupGpio() == -1) {
+        cerr << "Erreur : wiringPi non initialisé !" << endl;
+        return 1;
+    }
+
+    // Configuration de la broche GPIO 17
+    pinMode(PIN_ANEMO, INPUT);
+    pullUpDnControl(PIN_ANEMO, PUD_UP); // Activation de la résistance de pull-up
+
+    // Attachement de l'interruption pour détecter les impulsions
+    if (wiringPiISR(PIN_ANEMO, INT_EDGE_FALLING, &pulseISR) < 0) {
+        cerr << "Erreur : Impossible d'attacher l'interruption GPIO 17 !" << endl;
+        return 1;
+    }
+
+    cout << "Démarrage du capteur de vent Peet Bros..." << endl;
+
+    // Boucle principale pour maintenir le programme en fonctionnement
+    while (true) {
+        delay(1000); // Évite la surcharge CPU, tout en laissant les interruptions fonctionner
+    }
+
+    return 0;
+}
